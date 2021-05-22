@@ -1,0 +1,27 @@
+{
+    "python.pythonPath": "C:\\Python37\\python.exe",
+    "window.zoomLevel": 0,
+    "workbench.editorAssociations": [
+        {
+            "viewType": "jupyter.notebook.ipynb",
+            "filenamePattern": "*.ipynb"
+        }
+    ],
+    "git.ignoreMissingGitWarning": true,
+    "workbench.colorTheme": "Default Dark+",
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+    "python.languageServer": "Microsoft",
+
+
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "meta.function-call.generic.python",
+            "settings": {
+              "foreground": "#DCDCAA"
+            }
+          }
+        ]
+      }
+}
