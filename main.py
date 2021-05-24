@@ -3,6 +3,13 @@ import pygame
 from pygame.locals import *
 import sys
 import math
+import threading
+import graph
+from concurrent.futures import ThreadPoolExecutor
+from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+import time
+import numpy as np
 
 MAX_X = 640
 MAX_Y = 480
@@ -132,8 +139,14 @@ class Simulation:
         fps.tick(25)
         self.food_time = food_time
         self.blobs = [Blob([]) for i in range(num_of_blobs)]
+        self.blobs_num_over_time = [len(self.blobs),]
+        
         self.food = [Food() for i in range(50)]
+        self.lock = threading.Lock()
     
+        self.main_game_thread: threading.Thread
+        # self.thread_executor: ThreadPoolExecutor = ThreadPoolExecutor()
+
     def get_nearest_food(self, p1):
         if len(self.food) == 0:
             return Food()
@@ -143,10 +156,12 @@ class Simulation:
     def get_nearest_blob(self, p1):
         return min(self.blobs, key=lambda f: distance(f.coord, p1) if p1 != f.coord else 20000)
 
-    def run(self):
-        
+    def handle_events(self):
         wait = 0
-
+        update_wait = 0
+    
+    
+        
         while True:
             self.DISPLAYSURF.fill((255, 255, 255))
             
@@ -172,7 +187,19 @@ class Simulation:
             else:
                 wait += 1
 
-            if len(self.blobs) < 5:
+
+            blobs_num = len(self.blobs)
+
+            if wait >= 500 and not self.lock.locked():
+                with self.lock:
+                    
+                    self.blobs_num_over_time.append(blobs_num)
+                #self.lock.release()
+                wait = 0            
+            else:
+                wait += 1    
+
+            if blobs_num < 5:
                 self.blobs.append(Blob([]))
 
 
@@ -183,6 +210,32 @@ class Simulation:
                     sys.exit()
 
 
+    def run(self):
+        # self.thread_executor. target=self.handle_events, args=(self,))
+        self.main_game_thread = threading.Thread(target=self.handle_events)
+        self.main_game_thread.start()
+        try:
+            show_blob_population(self)
+        except KeyboardInterrupt:
+            self.main_game_thread.join()
+
+
+        
+
+def show_blob_population(simulation: Simulation):
+    x_vals = []
+    
+
+
+    while True:
+        time.sleep(1)
+        if not simulation.lock.locked():
+            
+            ani = FuncAnimation(plt.gcf(), graph.animate, fargs=(simulation,), interval=1000)
+            plt.tight_layout()
+            plt.show()
+
+
 def main():
    d = Simulation(500, 10)
    d.run()
@@ -190,3 +243,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
