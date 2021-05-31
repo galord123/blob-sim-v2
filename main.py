@@ -36,7 +36,7 @@ class Blob:
             self.radius = rd.randint(5,20)
             
             self.sight = rd.randint(50, 150)
-            self.speed = rd.randint(300., 500.)
+            self.speed = rd.randint(30, 50)
 
             self.genome.append(self.color)
             self.genome.append(self.radius)
@@ -53,15 +53,20 @@ class Blob:
         self.energy = 10
         self.coord = (rd.randint(0,MAX_X),  rd.randint(0,MAX_Y))
         self.goal = (rd.randint(0,MAX_X),  rd.randint(0,MAX_Y))
-        self.wait = 1000
+        self.wait = 50
         self.produce_timer = 10
 
-    def draw(self, DISPLAYSURF, simulation: 'Simulation'):
+    def draw(self, DISPLAYSURF, simulation: 'Simulation', delta_time):
         self.energy -= 1/500
         self.produce_timer -= 1/500
 
         dx, dy = (self.goal[0] - self.coord[0], self.goal[1] - self.coord[1])
-        stepx, stepy = (dx / self.speed, dy / self.speed)
+        length = math.sqrt(dx*dx + dy*dy)
+        if length == 0:
+            length = 1
+        dx /= length
+        dy /= length
+        stepx, stepy = (dx * self.speed * delta_time, dy * self.speed * delta_time)
 
         new_x = self.coord[0] + stepx
         new_y = self.coord[1] + stepy
@@ -101,7 +106,7 @@ class Blob:
             else:
                 self.goal = (rd.uniform(self.coord[0] - 100, self.coord[0] + 100),  rd.uniform(self.coord[1] - 100, self.coord[1] + 100))
             
-            self.wait = 500
+            self.wait = 50
 
         if new_x > MAX_X:
             new_x = MAX_X
@@ -143,7 +148,7 @@ class Simulation:
         
         self.food = [Food() for i in range(50)]
         self.lock = threading.Lock()
-    
+        self.terminate = False
         self.main_game_thread: threading.Thread
         # self.thread_executor: ThreadPoolExecutor = ThreadPoolExecutor()
 
@@ -159,18 +164,23 @@ class Simulation:
     def handle_events(self):
         wait = 0
         update_wait = 0
-    
+        prev_time = time.time()
+        now_time = time.time()
     
         
         while True:
             self.DISPLAYSURF.fill((255, 255, 255))
+            
+            now_time = time.time()
+            delta_time = now_time - prev_time 
+            prev_time = now_time
             
             for b in self.blobs:
                 for f in self.food:
                     if distance(b.coord, f.coord) <= b.radius:
                         b.energy += 2
                         self.food.remove(f)
-                b.draw(self.DISPLAYSURF, self)
+                b.draw(self.DISPLAYSURF, self, delta_time)
                 # print(b.state)
                 
                 if b.energy <= 0:
@@ -180,7 +190,7 @@ class Simulation:
                 f.draw(self.DISPLAYSURF)
 
             if wait >= self.food_time:
-                for i in range(3):
+                for i in range(10):
                     self.food.append(Food())
                 wait = 0
 
@@ -205,9 +215,11 @@ class Simulation:
 
             pygame.display.update()
             for event in pygame.event.get():
-                if event.type == QUIT:
+                if event.type == QUIT or self.terminate:
                     pygame.quit()
                     sys.exit()
+            
+
 
 
     def run(self):
@@ -215,9 +227,17 @@ class Simulation:
         self.main_game_thread = threading.Thread(target=self.handle_events)
         self.main_game_thread.start()
         try:
-            show_blob_population(self)
+            choice = input("enter monitor mode:")
+            if choice == "p":
+                show_blob_population(self)
+            else:
+                self.terminate = True
+                
+            
         except KeyboardInterrupt:
-            self.main_game_thread.join()
+            pygame.quit()
+            
+            
 
 
         
@@ -227,13 +247,15 @@ def show_blob_population(simulation: Simulation):
     
 
 
-    while True:
-        time.sleep(1)
-        if not simulation.lock.locked():
+
+
+    time.sleep(1)
+    if not simulation.lock.locked():
+        
+        ani = FuncAnimation(plt.gcf(), graph.animate, fargs=(simulation,), interval=1000)
+        plt.tight_layout()
+        plt.show()
             
-            ani = FuncAnimation(plt.gcf(), graph.animate, fargs=(simulation,), interval=1000)
-            plt.tight_layout()
-            plt.show()
 
 
 def main():
