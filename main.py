@@ -13,9 +13,27 @@ import numpy as np
 
 MAX_X = 640
 MAX_Y = 480
+MUTATION_RATE = 0.2
 
 def distance(p1, p2):
-    return math.sqrt( ((int(p1[0])-int(p2[0]))**2)+((int(p1[1])-int(p2[1]))**2) )
+    return math.sqrt(((int(p1[0])-int(p2[0]))**2)+((int(p1[1])-int(p2[1]))**2))
+
+
+def mutation(genome):
+
+    if rd.random() < MUTATION_RATE:
+        return genome
+
+    index = rd.randint(0, len(genome) - 1)
+    if index == 0:
+        temp = list(genome[index])
+        temp[rd.randint(1, len(genome[index]) - 1)] = rd.choice('0123456789ABCDEF')
+        genome[index] = "".join(temp)
+    
+    else:
+        genome[index] += rd.randint(-1, 1)
+
+    return genome
 
 
 def crossover(a: 'Blob', b: 'Blob'):
@@ -24,17 +42,17 @@ def crossover(a: 'Blob', b: 'Blob'):
     a_genome = a.genome[0:p] + b.genome[p:]
     b_genome = b.genome[0:p] + a.genome[p:]
 
-    return Blob(a_genome), Blob(b_genome)
+    return Blob(mutation(a_genome)), Blob(mutation(b_genome))
 
 
 class Blob:
     def __init__(self, genome=[]):
         self.genome = genome
-        
+
         if len(genome) == 0:
             self.color = "#"+''.join([rd.choice('0123456789ABCDEF') for j in range(6)])
-            self.radius = rd.randint(5,20)
-            
+            self.radius = rd.randint(5, 20)
+
             self.sight = rd.randint(50, 150)
             self.speed = rd.randint(30, 50)
 
@@ -51,8 +69,8 @@ class Blob:
 
         self.state = 1
         self.energy = 10
-        self.coord = (rd.randint(0,MAX_X),  rd.randint(0,MAX_Y))
-        self.goal = (rd.randint(0,MAX_X),  rd.randint(0,MAX_Y))
+        self.coord = (rd.randint(0, MAX_X),  rd.randint(0, MAX_Y))
+        self.goal = (rd.randint(0, MAX_X),  rd.randint(0, MAX_Y))
         self.wait = 50
         self.produce_timer = 10
 
@@ -79,7 +97,6 @@ class Blob:
 
         if stepy < 1 and stepx < 1:
             self.wait -= 1
-        
 
         nearest_blob = simulation.get_nearest_blob(self.coord)
 
@@ -90,11 +107,8 @@ class Blob:
             simulation.blobs.append(child_a)
             simulation.blobs.append(child_b)
 
-
-
-
         if self.wait <= 0:
-            nearest_food = simulation.get_nearest_food(self.coord) 
+            nearest_food = simulation.get_nearest_food(self.coord)
             nearest_blob = simulation.get_nearest_blob(self.coord)
 
             if nearest_blob != self and distance(nearest_blob.coord, self.coord) <= self.sight and self.state == 2:
@@ -105,7 +119,7 @@ class Blob:
 
             else:
                 self.goal = (rd.uniform(self.coord[0] - 100, self.coord[0] + 100),  rd.uniform(self.coord[1] - 100, self.coord[1] + 100))
-            
+
             self.wait = 50
 
         if new_x > MAX_X:
@@ -126,10 +140,9 @@ class Blob:
         pygame.draw.circle(DISPLAYSURF, self.color, self.coord, self.sight, width=1)
 
     
-
 class Food:
     def __init__(self):
-        self.coord = (rd.randint(0,MAX_X),  rd.randint(0,MAX_Y))
+        self.coord = (rd.randint(0, MAX_X),  rd.randint(0, MAX_Y))
 
     def draw(self, DISPLAYSURF):
         pygame.draw.circle(DISPLAYSURF, (0, 255, 0), self.coord, 4)
@@ -167,7 +180,6 @@ class Simulation:
         prev_time = time.time()
         now_time = time.time()
     
-        
         while True:
             self.DISPLAYSURF.fill((255, 255, 255))
             
@@ -204,7 +216,7 @@ class Simulation:
                 with self.lock:
                     
                     self.blobs_num_over_time.append(blobs_num)
-                #self.lock.release()
+                # self.lock.release()
                 wait = 0            
             else:
                 wait += 1    
@@ -220,8 +232,6 @@ class Simulation:
                     sys.exit()
             
 
-
-
     def run(self):
         # self.thread_executor. target=self.handle_events, args=(self,))
         self.main_game_thread = threading.Thread(target=self.handle_events)
@@ -232,22 +242,14 @@ class Simulation:
                 show_blob_population(self)
             else:
                 self.terminate = True
-                
-            
+
         except KeyboardInterrupt:
             pygame.quit()
             
-            
-
-
-        
 
 def show_blob_population(simulation: Simulation):
     x_vals = []
     
-
-
-
 
     time.sleep(1)
     if not simulation.lock.locked():
@@ -259,10 +261,9 @@ def show_blob_population(simulation: Simulation):
 
 
 def main():
-   d = Simulation(500, 10)
-   d.run()
+    d = Simulation(500, 10)
+    d.run()
 
 
 if __name__ == "__main__":
     main()
-
