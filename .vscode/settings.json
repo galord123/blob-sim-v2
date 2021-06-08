@@ -1,5 +1,6 @@
 {
-    "python.pythonPath": "C:\\Python37\\python.exe",
+    "python.pythonPath": "c:\\python37\\python.exe",
+    "python.linting.pylintPath": "c:\\python37\\python.exe",
     "window.zoomLevel": 0,
     "workbench.editorAssociations": [
         {
@@ -25,5 +26,7 @@
         ]
       },
       "python.linting.pylintEnabled": true,
-      "python.linting.enabled": false
+      "python.linting.enabled": false,
+      "python.linting.mypyEnabled": false,
+      "python.linting.flake8Enabled": false
 }
