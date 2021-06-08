@@ -1,9 +1,10 @@
 import random as rd
 import pygame
 from pygame.locals import *
+import pygame_gui
 import sys
 import math
-import threading
+import threading    
 import graph
 from concurrent.futures import ThreadPoolExecutor
 from matplotlib.animation import FuncAnimation
@@ -14,6 +15,7 @@ import numpy as np
 MAX_X = 640
 MAX_Y = 480
 MUTATION_RATE = 0.2
+
 
 def distance(p1, p2):
     return math.sqrt(((int(p1[0])-int(p2[0]))**2)+((int(p1[1])-int(p2[1]))**2))
@@ -137,7 +139,7 @@ class Blob:
         new_coord = (new_x, new_y)
         self.coord = new_coord
         pygame.draw.circle(DISPLAYSURF, self.color, self.coord, self.radius)
-        pygame.draw.circle(DISPLAYSURF, self.color, self.coord, self.sight, width=1)
+        # pygame.draw.circle(DISPLAYSURF, self.color, self.coord, self.sight, width=1)
 
     
 class Food:
@@ -147,14 +149,21 @@ class Food:
     def draw(self, DISPLAYSURF):
         pygame.draw.circle(DISPLAYSURF, (0, 255, 0), self.coord, 4)
 
+class UI:
+    def __init__(self):
+        self.manager = pygame_gui.UIManager((MAX_X, MAX_Y))
+        self.slider = pygame_gui.elements.ui_horizontal_slider.UIHorizontalSlider(relative_rect=pygame.Rect((50, 275), (100, 20)), manager=self.manager, start_value=10, value_range=(0, 15))
+
 
 class Simulation:
     def __init__(self, food_time, num_of_blobs):
         pygame.init()
         self.DISPLAYSURF = pygame.display.set_mode((MAX_X, MAX_Y))
+        self.ui_manager = UI()
         # self.DISPLAYSURF.fill((255, 255, 255))
-        fps = pygame.time.Clock()
-        fps.tick(25)
+        self.clock = pygame.time.Clock()
+        
+        self.food_amount = 10
         self.food_time = food_time
         self.blobs = [Blob([]) for i in range(num_of_blobs)]
         self.blobs_num_over_time = [len(self.blobs),]
@@ -176,16 +185,16 @@ class Simulation:
 
     def handle_events(self):
         wait = 0
+        wait_update = 0
         update_wait = 0
         prev_time = time.time()
         now_time = time.time()
-    
-        while True:
+        is_running = True
+        while is_running:
             self.DISPLAYSURF.fill((255, 255, 255))
             
-            now_time = time.time()
-            delta_time = now_time - prev_time 
-            prev_time = now_time
+            delta_time = self.clock.tick(60)/1000.0
+
             
             for b in self.blobs:
                 for f in self.food:
@@ -202,7 +211,7 @@ class Simulation:
                 f.draw(self.DISPLAYSURF)
 
             if wait >= self.food_time:
-                for i in range(10):
+                for i in range(self.food_amount):
                     self.food.append(Food())
                 wait = 0
 
@@ -212,25 +221,34 @@ class Simulation:
 
             blobs_num = len(self.blobs)
 
-            if wait >= 500 and not self.lock.locked():
+            if wait_update >= 500 and not self.lock.locked():
                 with self.lock:
                     
                     self.blobs_num_over_time.append(blobs_num)
                 # self.lock.release()
-                wait = 0            
+                wait_update = 0            
             else:
-                wait += 1    
+                wait_update += 1    
 
             if blobs_num < 5:
                 self.blobs.append(Blob([]))
 
-
+            self.ui_manager.manager.draw_ui(self.DISPLAYSURF)
             pygame.display.update()
             for event in pygame.event.get():
+               
                 if event.type == QUIT or self.terminate:
-                    pygame.quit()
-                    sys.exit()
+                    is_running = False
+
+                if event.type == pygame.USEREVENT:
+                    if event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+                        if event.ui_element == self.ui_manager.slider:
+                            self.food_amount = self.ui_manager.slider.current_value
+                            
+                self.ui_manager.manager.process_events(event)
             
+            self.ui_manager.manager.update(delta_time)
+
 
     def run(self):
         # self.thread_executor. target=self.handle_events, args=(self,))
@@ -242,9 +260,15 @@ class Simulation:
                 show_blob_population(self)
             else:
                 self.terminate = True
+                
+                self.main_game_thread.join()
+                
 
         except KeyboardInterrupt:
             pygame.quit()
+        
+        self.main_game_thread.join()
+
             
 
 def show_blob_population(simulation: Simulation):
@@ -261,7 +285,7 @@ def show_blob_population(simulation: Simulation):
 
 
 def main():
-    d = Simulation(500, 10)
+    d = Simulation(400, 10)
     d.run()
 
 
